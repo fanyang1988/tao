@@ -32,7 +32,7 @@ func NewPingPongServer() *PingPongServer {
 	})
 
 	return &PingPongServer{
-		tao.NewServer(logger.NewNullLogger(),
+		tao.NewServer(logger.NewSeeLogLogger(),
 			onConnect, onError, onClose),
 	}
 }
