@@ -3,8 +3,8 @@ package chat
 import (
 	"context"
 
-	"github.com/leesper/holmes"
 	"github.com/leesper/tao"
+	"github.com/cihub/seelog"
 )
 
 const (
@@ -41,7 +41,7 @@ func DeserializeMessage(data []byte) (message tao.Message, err error) {
 
 // ProcessMessage handles the Message logic.
 func ProcessMessage(ctx context.Context, conn tao.WriteCloser) {
-	holmes.Infof("ProcessMessage")
+	seelog.Infof("ProcessMessage")
 	s, ok := tao.ServerFromContext(ctx)
 	if ok {
 		msg := tao.MessageFromContext(ctx)

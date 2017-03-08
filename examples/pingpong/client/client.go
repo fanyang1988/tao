@@ -20,7 +20,7 @@ func main() {
 
 	c, err := net.Dial("tcp", "127.0.0.1:12346")
 	if err != nil {
-		holmes.Fatalln(err)
+		seelog.Criticalf(err)
 	}
 
 	conn := tao.NewClientConn(0, c)
@@ -32,7 +32,7 @@ func main() {
 	}
 	for {
 		conn.Write(req)
-		holmes.Infoln(<-rspChan)
+		seelog.Infof(<-rspChan)
 	}
 }
 

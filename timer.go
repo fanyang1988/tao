@@ -5,8 +5,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/leesper/holmes"
 )
 
 var timerIds *AtomicInt64
@@ -153,7 +151,7 @@ func (tw *TimingWheel) getExpired() []*timerType {
 		timer := heap.Pop(&tw.timers).(*timerType)
 		delta := float64(timer.expiration.UnixNano()-now.UnixNano()) / 1e9
 		if delta <= -1.0 {
-			holmes.Warnf("delta %f\n", delta)
+			//holmes.Warnf("delta %f\n", delta)
 		}
 		if -1.0 < delta && delta <= 0.0 {
 			expired = append(expired, timer)

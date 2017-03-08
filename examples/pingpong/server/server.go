@@ -5,9 +5,9 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/leesper/holmes"
 	"github.com/leesper/tao"
 	"github.com/leesper/tao/examples/pingpong"
+	"github.com/cihub/seelog"
 )
 
 // PingPongServer defines pingpong server.
@@ -18,16 +18,16 @@ type PingPongServer struct {
 // NewPingPongServer returns PingPongServer.
 func NewPingPongServer() *PingPongServer {
 	onConnect := tao.OnConnectOption(func(conn tao.WriteCloser) bool {
-		holmes.Infoln("on connect")
+		seelog.Infof("on connect")
 		return true
 	})
 
 	onError := tao.OnErrorOption(func(conn tao.WriteCloser) {
-		holmes.Infoln("on error")
+		seelog.Infof("on error")
 	})
 
 	onClose := tao.OnCloseOption(func(conn tao.WriteCloser) {
-		holmes.Infoln("closing pingpong client")
+		seelog.Infof("closing pingpong client")
 	})
 
 	return &PingPongServer{
@@ -37,13 +37,13 @@ func NewPingPongServer() *PingPongServer {
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	defer holmes.Start().Stop()
+	defer seelog.Flush()
 	tao.MonitorOn(12345)
 	tao.Register(pingpong.PingPontMessage, pingpong.DeserializeMessage, ProcessPingPongMessage)
 
 	l, err := net.Listen("tcp", ":12346")
 	if err != nil {
-		holmes.Fatalln("listen error", err)
+		seelog.Criticalf("listen error", err)
 	}
 
 	server := NewPingPongServer()
@@ -54,7 +54,7 @@ func main() {
 // ProcessPingPongMessage handles business logic.
 func ProcessPingPongMessage(ctx context.Context, conn tao.WriteCloser) {
 	ping := tao.MessageFromContext(ctx).(pingpong.Message)
-	holmes.Infoln(ping.Info)
+	seelog.Infof("%v", ping.Info)
 	rsp := pingpong.Message{
 		Info: "pong",
 	}

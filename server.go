@@ -4,18 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
-	"flag"
 	"fmt"
 	"net"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/leesper/holmes"
 )
 
 func init() {
-	flag.Parse()
 	netIdentifier = NewAtomicInt64(0)
 }
 
@@ -104,11 +100,12 @@ type Server struct {
 	// for periodically running function every duration.
 	interv time.Duration
 	sched  onScheduleFunc
+	logger LoggerInterface
 }
 
 // NewServer returns a new TCP server which has not started
 // to serve requests yet.
-func NewServer(opt ...ServerOption) *Server {
+func NewServer(logger LoggerInterface, opt ...ServerOption) *Server {
 	var opts options
 	for _, o := range opt {
 		o(&opts)
@@ -122,6 +119,7 @@ func NewServer(opt ...ServerOption) *Server {
 		conns: NewConnMap(),
 		wg:    &sync.WaitGroup{},
 		lis:   make(map[net.Listener]bool),
+		logger:logger,
 	}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.timing = NewTimingWheel(s.ctx)
@@ -147,7 +145,9 @@ func (s *Server) Broadcast(msg Message) {
 	defer s.conns.RUnlock()
 	for _, c := range s.conns.m {
 		if err := c.Write(msg); err != nil {
-			holmes.Errorf("broadcast error %v\n", err)
+			if s.logger != nil {
+				s.logger.Errorf("broadcast error %v\n", err)
+			}
 		}
 	}
 }
@@ -194,8 +194,9 @@ func (s *Server) Start(l net.Listener) error {
 		s.mu.Unlock()
 	}()
 
-	holmes.Infof("server start, net %s addr %s\n", l.Addr().Network(), l.Addr().String())
-
+	if s.logger != nil {
+		s.logger.Infof("server start, net %s addr %s\n", l.Addr().Network(), l.Addr().String())
+	}
 	s.wg.Add(1)
 	go s.timeOutLoop()
 
@@ -212,7 +213,9 @@ func (s *Server) Start(l net.Listener) error {
 				if max := 1 * time.Second; tempDelay >= max {
 					tempDelay = max
 				}
-				holmes.Errorf("accept error %v, retrying in %d\n", err, tempDelay)
+				if s.logger != nil {
+					s.logger.Errorf("accept error %v, retrying in %d\n", err, tempDelay)
+				}
 				select {
 				case <-time.After(tempDelay):
 				case <-s.ctx.Done():
@@ -226,7 +229,9 @@ func (s *Server) Start(l net.Listener) error {
 		// how many connections do we have ?
 		sz := s.conns.Size()
 		if sz >= MaxConnections {
-			holmes.Warnf("max connections size %d, refuse\n", sz)
+			if s.logger != nil {
+				s.logger.Warnf("max connections size %d, refuse\n", sz)
+			}
 			rawConn.Close()
 			continue
 		}
@@ -253,12 +258,14 @@ func (s *Server) Start(l net.Listener) error {
 			sc.Start()
 		}()
 
-		holmes.Infof("accepted client %s, id %d, total %d\n", sc.GetName(), netid, s.conns.Size())
-		s.conns.RLock()
-		for _, c := range s.conns.m {
-			holmes.Infof("client %s\n", c.GetName())
+		if s.logger != nil {
+			s.logger.Infof("accepted client %s, id %d, total %d\n", sc.GetName(), netid, s.conns.Size())
+			s.conns.RLock()
+			for _, c := range s.conns.m {
+				s.logger.Infof("client %s\n", c.GetName())
+			}
+			s.conns.RUnlock()
 		}
-		s.conns.RUnlock()
 	} // for loop
 }
 
@@ -273,7 +280,9 @@ func (s *Server) Stop() {
 
 	for l := range listeners {
 		l.Close()
-		holmes.Infof("stop accepting at address %s\n", l.Addr().String())
+		if s.logger != nil {
+			s.logger.Infof("stop accepting at address %s\n", l.Addr().String())
+		}
 	}
 
 	// close all connections
@@ -287,7 +296,9 @@ func (s *Server) Stop() {
 
 	for _, c := range conns {
 		c.rawConn.Close()
-		holmes.Infof("close client %s\n", c.GetName())
+		if s.logger != nil {
+			s.logger.Infof("close client %s\n", c.GetName())
+		}
 	}
 
 	s.mu.Lock()
@@ -296,7 +307,9 @@ func (s *Server) Stop() {
 
 	s.wg.Wait()
 
-	holmes.Infoln("server stopped gracefully, bye.")
+	if s.logger != nil {
+		s.logger.Infof("server stopped gracefully, bye.")
+	}
 	os.Exit(0)
 }
 
@@ -316,7 +329,9 @@ func (s *Server) timeOutLoop() {
 			if sc, ok := s.conns.Get(netID); ok {
 				sc.timerCh <- timeout
 			} else {
-				holmes.Warnf("invalid client %d\n", netID)
+				if s.logger != nil {
+					s.logger.Warnf("invalid client %d\n", netID)
+				}
 			}
 		}
 	}

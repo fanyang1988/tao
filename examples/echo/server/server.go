@@ -17,20 +17,20 @@ type EchoServer struct {
 // NewEchoServer returns an EchoServer.
 func NewEchoServer() *EchoServer {
 	onConnect := tao.OnConnectOption(func(conn tao.WriteCloser) bool {
-		holmes.Infoln("on connect")
+		seelog.Infof("on connect")
 		return true
 	})
 
 	onClose := tao.OnCloseOption(func(conn tao.WriteCloser) {
-		holmes.Infoln("closing client")
+		seelog.Infof("closing client")
 	})
 
 	onError := tao.OnErrorOption(func(conn tao.WriteCloser) {
-		holmes.Infoln("on error")
+		seelog.Infof("on error")
 	})
 
 	onMessage := tao.OnMessageOption(func(msg tao.Message, conn tao.WriteCloser) {
-		holmes.Infoln("receving message")
+		seelog.Infof("receving message")
 	})
 
 	return &EchoServer{

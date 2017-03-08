@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-
-	"github.com/leesper/holmes"
 )
 
 var (
@@ -27,7 +25,6 @@ func init() {
 func MonitorOn(port int) {
 	go func() {
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
-			holmes.Errorln(err)
 			return
 		}
 	}()
@@ -51,19 +48,16 @@ func addTotalTime(seconds float64) {
 func calculateQPS() {
 	totalConn, err := strconv.ParseInt(connExported.String(), 10, 64)
 	if err != nil {
-		holmes.Errorln(err)
 		return
 	}
 
 	totalTime, err := strconv.ParseFloat(timeExported.String(), 64)
 	if err != nil {
-		holmes.Errorln(err)
 		return
 	}
 
 	totalHandle, err := strconv.ParseInt(handleExported.String(), 10, 64)
 	if err != nil {
-		holmes.Errorln(err)
 		return
 	}
 
