@@ -5,8 +5,9 @@ import (
 	"net"
 
 	"github.com/leesper/holmes"
-	"github.com/leesper/tao"
-	"github.com/leesper/tao/examples/pingpong"
+	"github.com/fanyang1988/tao"
+	"github.com/fanyang1988/tao/examples/pingpong"
+	"github.com/cihub/seelog"
 )
 
 var (

@@ -5,9 +5,10 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/leesper/tao"
-	"github.com/leesper/tao/examples/pingpong"
+	"github.com/fanyang1988/tao"
+	"github.com/fanyang1988/tao/examples/pingpong"
 	"github.com/cihub/seelog"
+	"github.com/fanyang1988/tao/logger"
 )
 
 // PingPongServer defines pingpong server.
@@ -31,7 +32,8 @@ func NewPingPongServer() *PingPongServer {
 	})
 
 	return &PingPongServer{
-		tao.NewServer(onConnect, onError, onClose),
+		tao.NewServer(logger.NewNullLogger(),
+			onConnect, onError, onClose),
 	}
 }
 
