@@ -3,8 +3,8 @@ package chat
 import (
 	"context"
 
-	"github.com/leesper/tao"
 	"github.com/cihub/seelog"
+	"github.com/leesper/tao"
 )
 
 const (

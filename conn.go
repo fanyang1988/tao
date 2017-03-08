@@ -47,7 +47,7 @@ type ServerConn struct {
 	pending []int64
 	ctx     context.Context
 	cancel  context.CancelFunc
-	logger LoggerInterface
+	logger  LoggerInterface
 }
 
 // NewServerConn returns a new server connection which has not started to
@@ -63,7 +63,7 @@ func NewServerConn(id int64, s *Server, c net.Conn) *ServerConn {
 		handlerCh: make(chan MessageHandler, 1024),
 		timerCh:   make(chan *OnTimeOut, 1024),
 		heart:     time.Now().UnixNano(),
-		logger:s.logger,
+		logger:    s.logger,
 	}
 	sc.ctx, sc.cancel = context.WithCancel(context.WithValue(s.ctx, serverCtx, s))
 	sc.name = c.RemoteAddr().String()
@@ -277,7 +277,7 @@ type ClientConn struct {
 	pending   []int64
 	ctx       context.Context
 	cancel    context.CancelFunc
-	logger LoggerInterface
+	logger    LoggerInterface
 }
 
 // NewClientConn returns a new client connection which has not started to
@@ -574,7 +574,7 @@ func readLoop(c WriteCloser, wg *sync.WaitGroup) {
 		handlerCh        chan MessageHandler
 		msg              Message
 		err              error
-		logger LoggerInterface
+		logger           LoggerInterface
 	)
 
 	switch c := c.(type) {
@@ -663,7 +663,7 @@ func writeLoop(c WriteCloser, wg *sync.WaitGroup) {
 		sDone   <-chan struct{}
 		pkt     []byte
 		err     error
-		logger LoggerInterface
+		logger  LoggerInterface
 	)
 
 	switch c := c.(type) {
@@ -682,7 +682,7 @@ func writeLoop(c WriteCloser, wg *sync.WaitGroup) {
 
 	defer func() {
 		if p := recover(); p != nil {
-			if logger!= nil {
+			if logger != nil {
 				logger.Errorf("panics: %v\n", p)
 			}
 		}
@@ -693,7 +693,7 @@ func writeLoop(c WriteCloser, wg *sync.WaitGroup) {
 			case pkt = <-sendCh:
 				if pkt != nil {
 					if _, err = rawConn.Write(pkt); err != nil {
-						if logger!= nil {
+						if logger != nil {
 							logger.Errorf("error writing data %v\n", err)
 						}
 					}
@@ -744,7 +744,7 @@ func handleLoop(c WriteCloser, wg *sync.WaitGroup) {
 		netID        int64
 		ctx          context.Context
 		askForWorker bool
-		logger LoggerInterface
+		logger       LoggerInterface
 	)
 
 	switch c := c.(type) {

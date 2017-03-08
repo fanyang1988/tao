@@ -6,9 +6,8 @@ import (
 
 	"github.com/cihub/seelog"
 	"github.com/fanyang1988/tao"
-	"github.com/fanyang1988/tao/examples/echo"
+	"github.com/fanyang1988/tao/examples/protobuf/msg"
 	"github.com/fanyang1988/tao/logger"
-	"github.com/leesper/holmes"
 )
 
 // EchoServer represents the echo server.
@@ -42,23 +41,18 @@ func NewEchoServer() *EchoServer {
 }
 
 func main() {
-	defer holmes.Start().Stop()
+	defer seelog.Flush()
 
-	runtime.GOMAXPROCS(1)
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	tao.Register(echo.Message{}.MessageNumber(),
-		echo.DeserializeMessage,
-		echo.ProcessMessage)
-	tao.Register(echo.Message2{}.MessageNumber(),
-		echo.DeserializeMessage2,
-		echo.ProcessMessage2)
-	tao.Register(echo.Message3{}.MessageNumber(),
-		echo.DeserializeMessage3,
-		echo.ProcessMessage3)
+	n := msg.PlayCardReq{}
+	tao.Register(n.MessageNumber(),
+		msg.DeserializePlayCardReqMessage,
+		msg.ProcessPlayCardReqMessage)
 
 	l, err := net.Listen("tcp", ":12345")
 	if err != nil {
-		holmes.Fatalf("listen error %v", err)
+		seelog.Criticalf("listen error %v", err)
 	}
 	echoServer := NewEchoServer()
 	defer echoServer.Stop()

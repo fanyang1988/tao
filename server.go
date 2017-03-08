@@ -115,11 +115,11 @@ func NewServer(logger LoggerInterface, opt ...ServerOption) *Server {
 	}
 
 	s := &Server{
-		opts:  opts,
-		conns: NewConnMap(),
-		wg:    &sync.WaitGroup{},
-		lis:   make(map[net.Listener]bool),
-		logger:logger,
+		opts:   opts,
+		conns:  NewConnMap(),
+		wg:     &sync.WaitGroup{},
+		lis:    make(map[net.Listener]bool),
+		logger: logger,
 	}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.timing = NewTimingWheel(s.ctx)

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/cihub/seelog"
 	"io"
 	"net"
 )
@@ -199,7 +200,6 @@ func (codec TypeLengthValueCodec) Decode(raw net.Conn) (Message, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		// deserialize message from bytes
 		unmarshaler := GetUnmarshalFunc(msgType)
 		if unmarshaler == nil {
@@ -220,6 +220,7 @@ func (codec TypeLengthValueCodec) Encode(msg Message) ([]byte, error) {
 	binary.Write(buf, binary.LittleEndian, int32(len(data)))
 	buf.Write(data)
 	packet := buf.Bytes()
+	seelog.Infof("num %v", msg.MessageNumber())
 	return packet, nil
 }
 

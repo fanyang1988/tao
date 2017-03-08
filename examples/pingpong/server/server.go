@@ -5,9 +5,9 @@ import (
 	"net"
 	"runtime"
 
+	"github.com/cihub/seelog"
 	"github.com/fanyang1988/tao"
 	"github.com/fanyang1988/tao/examples/pingpong"
-	"github.com/cihub/seelog"
 	"github.com/fanyang1988/tao/logger"
 )
 
