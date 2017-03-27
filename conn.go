@@ -26,6 +26,7 @@ type MessageHandler struct {
 // WriteCloser is the interface that groups Write and Close methods.
 type WriteCloser interface {
 	Write(Message) error
+	WriteByRes(Message) error
 	Close()
 }
 
@@ -37,7 +38,7 @@ type ServerConn struct {
 
 	once      *sync.Once
 	wg        *sync.WaitGroup
-	sendCh    chan []byte
+	sendCh    chan writeData
 	handlerCh chan MessageHandler
 	timerCh   chan *OnTimeOut
 
@@ -59,7 +60,7 @@ func NewServerConn(id int64, s *Server, c net.Conn) *ServerConn {
 		rawConn:   c,
 		once:      &sync.Once{},
 		wg:        &sync.WaitGroup{},
-		sendCh:    make(chan []byte, 1024),
+		sendCh:    make(chan writeData, 1024),
 		handlerCh: make(chan MessageHandler, 1024),
 		timerCh:   make(chan *OnTimeOut, 1024),
 		heart:     time.Now().UnixNano(),
@@ -162,6 +163,7 @@ func (sc *ServerConn) Close() {
 		}
 
 		// remove connection from server
+		sc.logger.Tracef("remove %v", sc.netid)
 		sc.belong.conns.Remove(sc.netid)
 		addTotalConn(-1)
 
@@ -209,7 +211,18 @@ func (sc *ServerConn) AddPendingTimer(timerID int64) {
 
 // Write writes a message to the client.
 func (sc *ServerConn) Write(message Message) error {
-	return asyncWrite(sc, message)
+	return asyncWrite(sc, message, nil)
+}
+
+func (cc *ServerConn) WriteByRes(message Message) error {
+	resChan := make(chan bool, 1)
+	err := asyncWrite(cc, message, resChan)
+	if err != nil{
+		return err
+	}
+
+	<-resChan
+	return nil
 }
 
 // RunAt runs a callback at the specified timestamp.
@@ -268,7 +281,7 @@ type ClientConn struct {
 	rawConn   net.Conn
 	once      *sync.Once
 	wg        *sync.WaitGroup
-	sendCh    chan []byte
+	sendCh    chan writeData
 	handlerCh chan MessageHandler
 	timing    *TimingWheel
 	mu        sync.Mutex // guards following
@@ -301,7 +314,7 @@ func newClientConnWithOptions(netid int64, c net.Conn, opts options) *ClientConn
 		rawConn:   c,
 		once:      &sync.Once{},
 		wg:        &sync.WaitGroup{},
-		sendCh:    make(chan []byte, 1024),
+		sendCh:    make(chan writeData, 1024),
 		handlerCh: make(chan MessageHandler, 1024),
 		heart:     time.Now().UnixNano(),
 	}
@@ -456,7 +469,18 @@ func (cc *ClientConn) reconnect() {
 
 // Write writes a message to the client.
 func (cc *ClientConn) Write(message Message) error {
-	return asyncWrite(cc, message)
+	return asyncWrite(cc, message, nil)
+}
+
+func (cc *ClientConn) WriteByRes(message Message) error {
+	resChan := make(chan bool, 1)
+	err := asyncWrite(cc, message, resChan)
+	if err != nil{
+		return err
+	}
+
+	<-resChan
+	return nil
 }
 
 // RunAt runs a callback at the specified timestamp.
@@ -526,7 +550,7 @@ func runEvery(ctx context.Context, netID int64, timing *TimingWheel, d time.Dura
 	return timing.AddTimer(delay, d, timeout)
 }
 
-func asyncWrite(c interface{}, m Message) error {
+func asyncWrite(c interface{}, m Message, cd chan bool) error {
 	defer func() error {
 		if p := recover(); p != nil {
 			return ErrServerClosed
@@ -537,7 +561,7 @@ func asyncWrite(c interface{}, m Message) error {
 	var (
 		pkt    []byte
 		err    error
-		sendCh chan []byte
+		sendCh chan writeData
 	)
 	switch c := c.(type) {
 	case *ServerConn:
@@ -554,7 +578,10 @@ func asyncWrite(c interface{}, m Message) error {
 	}
 
 	select {
-	case sendCh <- pkt:
+	case sendCh <- writeData{
+		data:pkt,
+		cbRes:cd,
+	}:
 		return nil
 	default:
 		return ErrWouldBlock
@@ -653,15 +680,19 @@ func readLoop(c WriteCloser, wg *sync.WaitGroup) {
 	}
 }
 
+type writeData struct {
+	data []byte
+	cbRes chan bool
+}
+
 /* writeLoop() receive message from channel, serialize it into bytes,
 then blocking write into connection */
 func writeLoop(c WriteCloser, wg *sync.WaitGroup) {
 	var (
 		rawConn net.Conn
-		sendCh  chan []byte
+		sendCh  chan writeData
 		cDone   <-chan struct{}
 		sDone   <-chan struct{}
-		pkt     []byte
 		err     error
 		logger LoggerInterface
 	)
@@ -690,11 +721,15 @@ func writeLoop(c WriteCloser, wg *sync.WaitGroup) {
 	OuterFor:
 		for {
 			select {
-			case pkt = <-sendCh:
-				if pkt != nil {
-					if _, err = rawConn.Write(pkt); err != nil {
+			case pkt := <-sendCh:
+				if pkt.data != nil {
+					if _, err = rawConn.Write(pkt.data); err != nil {
 						if logger!= nil {
 							logger.Errorf("error writing data %v\n", err)
+						}
+					}else{
+						if pkt.cbRes != nil{
+							pkt.cbRes <- true
 						}
 					}
 				}
@@ -721,13 +756,17 @@ func writeLoop(c WriteCloser, wg *sync.WaitGroup) {
 				logger.Debug("receiving cancel signal from server")
 			}
 			return
-		case pkt = <-sendCh:
-			if pkt != nil {
-				if _, err = rawConn.Write(pkt); err != nil {
+		case pkt := <-sendCh:
+			if pkt.data != nil {
+				if _, err = rawConn.Write(pkt.data); err != nil {
 					if logger != nil {
 						logger.Errorf("error writing data %v\n", err)
 					}
 					return
+				}else{
+					if pkt.cbRes != nil{
+						pkt.cbRes <- true
+					}
 				}
 			}
 		}

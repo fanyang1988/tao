@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"os"
 	"sync"
 	"time"
 )
@@ -143,7 +142,8 @@ func (s *Server) Sched(dur time.Duration, sched func(time.Time, WriteCloser)) {
 func (s *Server) Broadcast(msg Message) {
 	s.conns.RLock()
 	defer s.conns.RUnlock()
-	for _, c := range s.conns.m {
+	for idx, c := range s.conns.m {
+		s.logger.Tracef("bro %v %v", idx, msg)
 		if err := c.Write(msg); err != nil {
 			if s.logger != nil {
 				s.logger.Errorf("broadcast error %v\n", err)
@@ -257,15 +257,6 @@ func (s *Server) Start(l net.Listener) error {
 		go func() {
 			sc.Start()
 		}()
-
-		if s.logger != nil {
-			s.logger.Infof("accepted client %s, id %d, total %d\n", sc.GetName(), netid, s.conns.Size())
-			s.conns.RLock()
-			for _, c := range s.conns.m {
-				s.logger.Infof("client %s\n", c.GetName())
-			}
-			s.conns.RUnlock()
-		}
 	} // for loop
 }
 
@@ -286,13 +277,12 @@ func (s *Server) Stop() {
 	}
 
 	// close all connections
+	s.conns.Lock()
 	conns := map[int64]*ServerConn{}
-	s.conns.RLock()
 	for k, v := range s.conns.m {
 		conns[k] = v
 	}
-	s.conns.Clear()
-	s.conns.RUnlock()
+	s.conns.Unlock()
 
 	for _, c := range conns {
 		c.rawConn.Close()
@@ -310,7 +300,6 @@ func (s *Server) Stop() {
 	if s.logger != nil {
 		s.logger.Infof("server stopped gracefully, bye.")
 	}
-	os.Exit(0)
 }
 
 // Retrieve the extra data(i.e. net id), and then redispatch timeout callbacks
