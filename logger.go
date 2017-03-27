@@ -49,4 +49,3 @@ type LoggerInterface interface {
 	// and writes to log with level = Critical
 	Critical(v ...interface{}) error
 }
-

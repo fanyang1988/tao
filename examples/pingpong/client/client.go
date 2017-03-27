@@ -4,10 +4,10 @@ import (
 	"context"
 	"net"
 
-	"github.com/leesper/holmes"
+	"github.com/cihub/seelog"
 	"github.com/fanyang1988/tao"
 	"github.com/fanyang1988/tao/examples/pingpong"
-	"github.com/cihub/seelog"
+	"github.com/leesper/holmes"
 )
 
 var (

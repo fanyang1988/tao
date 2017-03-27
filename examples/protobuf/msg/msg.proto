@@ -1,0 +1,42 @@
+package demo;
+
+message CreateRoomReq {
+    required string UserID = 1;
+    required int32 RoomType = 2 [default=1];
+}
+
+message CreateRoomRsp {
+    required int32 Code = 1;
+    required string RoomNum = 2;
+}
+
+message EnterRoomReq {
+    required string UserID = 1;
+    required int32 RoomType = 2 [default=1];
+    required string RoomNum = 3;
+}
+
+message EnterRoomRsp {
+    required int32 code = 1;
+}
+
+message Cards {
+    repeated int32 card = 1;
+}
+
+message PlayCardReq {
+    required Cards card = 1;
+}
+
+message PlayCardRsp {
+    required int32 Code = 1;
+}
+
+message Test {
+    required string label = 1;
+    optional int32 type = 2 [default=77];
+    repeated int64 reps = 3;
+    optional group OptionalGroup = 4 {
+        required string RequiredField = 5;
+    }
+}
