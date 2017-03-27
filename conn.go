@@ -27,21 +27,20 @@ type MessageHandler struct {
 type WriteCloser interface {
 	Write(Message) error
 	WriteByRes(Message) error
+	GetNetID() int64
 	Close()
 }
 
 // ServerConn represents a server connection to a TCP server, it implments Conn.
 type ServerConn struct {
-	netid   int64
-	belong  *Server
-	rawConn net.Conn
-
 	once      *sync.Once
 	wg        *sync.WaitGroup
 	sendCh    chan writeData
 	handlerCh chan MessageHandler
 	timerCh   chan *OnTimeOut
-
+	netid   int64
+	belong  *Server
+	rawConn net.Conn
 	mu      sync.Mutex // guards following
 	name    string
 	heart   int64
@@ -197,6 +196,8 @@ func (sc *ServerConn) Close() {
 
 		// tell server I'm done.
 		sc.belong.wg.Done()
+
+		sc.logger.Tracef("close success")
 	})
 }
 
@@ -221,7 +222,9 @@ func (cc *ServerConn) WriteByRes(message Message) error {
 		return err
 	}
 
+	cc.logger.Tracef("wait return")
 	<-resChan
+	cc.logger.Tracef("ok")
 	return nil
 }
 

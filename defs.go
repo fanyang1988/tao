@@ -36,7 +36,7 @@ const (
 	// WorkersNum is the number of worker go-routines.
 	WorkersNum = 20
 	// MaxConnections is the maximum number of client connections allowed.
-	MaxConnections = 1000
+	MaxConnections = 10000
 )
 
 type onConnectFunc func(WriteCloser) bool
